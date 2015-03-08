@@ -1,0 +1,26 @@
+{
+  "name": "cerberus-middleware",
+  "version": "0.1.0",
+  "description": "Express Middleware for the Cerberus API Gateway",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aperturescience/cerberus-middleware.git"
+  },
+  "keywords": [
+    "cerberus"
+  ],
+  "author": "Gilles De Mey <gilles.de.mey@gmail.com>",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/aperturescience/cerberus-middleware/issues"
+  },
+  "homepage": "https://github.com/aperturescience/cerberus-middleware",
+  "dependencies": {
+    "lodash-node": "^3.4.0",
+    "ws": "^0.7.1"
+  }
+}
