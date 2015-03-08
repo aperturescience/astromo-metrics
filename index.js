@@ -1,10 +1,14 @@
+'use strict';
+
 var _         = require('lodash-node');
 var WebSocket = require('ws');
 
 var bunyan    = require('bunyan');
 var log;
 
-var Cerberus = function(options) {
+var Analytics = require('./analytics');
+
+function Cerberus(options) {
   var self = this;
 
   // defaults
@@ -13,20 +17,23 @@ var Cerberus = function(options) {
 
   _.assign(this, options);
 
+  // Create Bunyan logger
+  this.log = log = bunyan.createLogger({
+    name  : 'cerberus-middleware',
+    level : self.debug ? bunyan.DEBUG : bunyan.INFO
+  });
+
+  // Cerberus sub-modules
+  this.Analytics = new Analytics(this).handler;
+
   // Create websocket connection to Cerberus
   var ws = this.ws = new WebSocket(this.gatewayUrl);
 
   // Error handler
   ws.on('error', self.onError);
 
-  // Create Bunyan logger
-  log = bunyan.createLogger({
-    name  : 'cerberus-middleware',
-    level : self.debug ? bunyan.DEBUG : bunyan.INFO
-  });
-
   self.openConnection();
-};
+}
 
 /**
  * Add message handlers
@@ -46,6 +53,9 @@ Cerberus.prototype.openConnection = function() {
   ws.on('message', self.parseMessage);
 };
 
+/**
+ * Parse message from WS connection
+ */
 Cerberus.prototype.parseMessage = function(data, flags) {
   data = JSON.parse(data);
 
@@ -62,8 +72,6 @@ Cerberus.prototype.parseMessage = function(data, flags) {
 Cerberus.prototype.onError = function(err) {
   log.error(err);
 };
-
-Cerberus.prototype.Analytics = require('./analytics');
 
 module.exports = function(options) {
   return new Cerberus(options);
