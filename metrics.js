@@ -3,9 +3,9 @@
 var _          = require('lodash-node');
 var onFinished = require('on-finished');
 
-var analytics;
+var self;
 
-function Analytics(client, options) {
+function Metrics(client, options) {
   this.client = client;
 
   _.assign(this, options);
@@ -15,7 +15,7 @@ function Analytics(client, options) {
  * Calculates hrtime difference between the start and end of a request.
  * Both in nanoseconds and milliseconds
  */
-Analytics.prototype.responseTime = function(req) {
+Metrics.prototype.responseTime = function(req) {
 
   var diff = process.hrtime(req._startAt);
 
@@ -30,9 +30,9 @@ Analytics.prototype.responseTime = function(req) {
 };
 
 /**
- * Analytics middleware request handler
+ * Metrics middleware request handler
  */
-Analytics.prototype.handler = function(req, res, next) {
+Metrics.prototype.handler = function(req, res, next) {
 
   // If we're not using Morgan, add the timings ourself
   if (!req.hasOwnProperty('_startAt'))
@@ -40,8 +40,8 @@ Analytics.prototype.handler = function(req, res, next) {
 
   // Wait for Express to send the response back to the client
   onFinished(res, function(err, res) {
-    var delay = analytics.responseTime(req);
-    analytics.client.log.info('delay: %d%s', delay.ns, 'ns');
+    var delay = self.responseTime(req);
+    self.client.log.info('delay: %d%s', delay.ms, 'ms');
   });
 
   next();
@@ -49,6 +49,6 @@ Analytics.prototype.handler = function(req, res, next) {
 
 module.exports = function(client, options) {
   options = options || {};
-  analytics = new Analytics(client, options);
-  return analytics;
+  self = new Metrics(client, options);
+  return self;
 };

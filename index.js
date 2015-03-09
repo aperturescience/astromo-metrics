@@ -6,7 +6,7 @@ var WebSocket = require('ws');
 var bunyan    = require('bunyan');
 var log;
 
-var Analytics = require('./analytics');
+var Metrics = require('./metrics');
 
 function Cerberus(options) {
   var self = this;
@@ -24,7 +24,7 @@ function Cerberus(options) {
   });
 
   // Cerberus sub-modules
-  this.Analytics = new Analytics(this).handler;
+  this.Metrics = new Metrics(this).handler;
 
   // Create websocket connection to Cerberus
   var ws = this.ws = new WebSocket(this.gatewayUrl);
