@@ -5,7 +5,7 @@ var WebSocket  = require('ws');
 var bunyan     = require('bunyan');
 var onFinished = require('on-finished');
 
-var instance, log;
+var log;
 
 function Metrics(client, options) {
   var self = this;
@@ -121,12 +121,12 @@ Metrics.prototype.handler = function(req, res, next) {
  */
 Metrics.prototype.parseRequest = function(req) {
 
-  var self = instance;
+  var self = this;
 
   if (!self.hostname)
     self.hostname = req.hostname;
 
-  var delay = instance.responseTime(req._startAt);
+  var delay = this.responseTime(req._startAt);
 
   return {
     '_meta' : {
@@ -146,7 +146,7 @@ Metrics.prototype.parseRequest = function(req) {
  */
 Metrics.prototype.parseResponse = function(res) {
 
-  var delay = instance.responseTime(res.req._startAt);
+  var delay = this.responseTime(res.req._startAt);
 
   return {
     'res': {
@@ -174,6 +174,5 @@ Metrics.prototype.sendMetrics = function(metrics) {
 };
 
 module.exports = function(client, opts) {
-  instance = new Metrics(client, opts);
-  return instance;
+  return new Metrics(client, opts);
 };
