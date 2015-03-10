@@ -21,44 +21,46 @@ function Metrics(client, options) {
   // Create Bunyan logger
   self.log = log = bunyan.createLogger({
     name        : 'cerberus.metrics',
-    level       : self.debug ? bunyan.DEBUG : bunyan.INFO,
-    serializers : bunyan.stdSerializers
+    level       : self.debug ? bunyan.DEBUG : bunyan.INFO
   });
 
-  self.connect();
+  self.connect(function() {
+    log.debug('Successfully connected');
+  });
 }
 
 /**
  * Connect to Metrics endpoint
  */
-Metrics.prototype.connect = function() {
-
+Metrics.prototype.connect = function(callback) {
   var self = this;
 
-  // Create websocket connection to Cerberus
   var ws = this.ws = new WebSocket(this.gatewayUrl);
 
-  // Error handler
   ws.on('error', self.onError);
 
-  if (!ws)
-    log.warn('No WebSocket connection initialized');
+  ws.on('open', callback || _.noop);
 
-  ws.on('open', function() {
-    log.debug('Successfully connected');
+  ws.on('message', function(data, flags) {
+    try {
+      self.parseMessage(data, flags);
+    } catch(ex) {
+      self.onError(ex);
+    }
   });
-
-  ws.on('message', this.parseMessage);
 };
 
 /**
  * Parse message from WS connection
+ * TODO: wrap in try/catch
  */
 Metrics.prototype.parseMessage = function(data, flags) {
   data = JSON.parse(data);
 
   if (data.type === 'WELCOME') {
     log.debug('Successfully authenticated');
+  } else {
+    log.warn('Received incorrect welcome message');
   }
 
 };
