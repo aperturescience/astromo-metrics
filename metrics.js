@@ -20,8 +20,8 @@ function Metrics(client, options) {
 
   // Create Bunyan logger
   self.log = log = bunyan.createLogger({
-    name        : 'cerberus.metrics',
-    level       : self.debug ? bunyan.DEBUG : bunyan.INFO
+    name  : 'cerberus.metrics',
+    level : self.debug ? bunyan.DEBUG : bunyan.INFO
   });
 
   self.connect(function() {
@@ -52,7 +52,6 @@ Metrics.prototype.connect = function(callback) {
 
 /**
  * Parse message from WS connection
- * TODO: wrap in try/catch
  */
 Metrics.prototype.parseMessage = function(data, flags) {
   data = JSON.parse(data);
@@ -128,14 +127,11 @@ Metrics.prototype.parseRequest = function(req) {
   if (!self.hostname)
     self.hostname = req.hostname;
 
-  var delay = this.responseTime(req._startAt);
-
   return {
     '_meta' : {
       'host' : self.hostname
     },
     'req': {
-      'delay' : delay,
       'href'  : req.protocol + '://' + self.hostname + req.path,
       'path'  : req.path,
     }
