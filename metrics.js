@@ -18,30 +18,28 @@ function Metrics(client, options) {
 
   _.assign(this, options);
 
-  self.metrics = {};
-
   // Create Bunyan logger
   self.log = log = bunyan.createLogger({
-    name  : 'cerberus.metrics',
-    level : self.debug ? bunyan.DEBUG : bunyan.INFO,
-    serializers: bunyan.stdSerializers
+    name        : 'cerberus.metrics',
+    level       : self.debug ? bunyan.DEBUG : bunyan.INFO,
+    serializers : bunyan.stdSerializers
   });
+
+  self.connect();
+}
+
+/**
+ * Connect to Metrics endpoint
+ */
+Metrics.prototype.connect = function() {
+
+  var self = this;
 
   // Create websocket connection to Cerberus
   var ws = this.ws = new WebSocket(this.gatewayUrl);
 
   // Error handler
   ws.on('error', self.onError);
-
-  self.openConnection();
-}
-
-/**
- * Add message handlers
- */
-Metrics.prototype.openConnection = function() {
-
-  var ws = this.ws;
 
   if (!ws)
     log.warn('No WebSocket connection initialized');
@@ -74,7 +72,7 @@ Metrics.prototype.onError = function(err) {
 };
 
 /**
- * Calculates hrtime difference between the start and end of a request.
+ * Calculates hrtime difference between then and now
  * Both in nanoseconds and milliseconds
  */
 Metrics.prototype.responseTime = function(hrtime) {
@@ -95,7 +93,6 @@ Metrics.prototype.responseTime = function(hrtime) {
  * Metrics middleware request handler
  */
 Metrics.prototype.handler = function(req, res, next) {
-
   var self = this;
 
   var metrics = self.parseRequest(req);
@@ -161,6 +158,9 @@ Metrics.prototype.parseResponse = function(res) {
 
 };
 
+/**
+ * Send metrics over WS to the gateway
+ */
 Metrics.prototype.sendMetrics = function(metrics) {
 
   log.debug('response code was %s', metrics.res.statusCode);
