@@ -22,7 +22,7 @@ function Metrics(client, options) {
 
   // Create Bunyan logger
   self.log = log = bunyan.createLogger({
-    name  : 'Cerberus Metrics',
+    name  : 'cerberus.metrics',
     level : self.debug ? bunyan.DEBUG : bunyan.INFO,
     serializers: bunyan.stdSerializers
   });
@@ -108,7 +108,7 @@ Metrics.prototype.handler = function(req, res, next) {
   onFinished(res, function(err, res) {
 
     if (err)
-      return log.error(err);
+      return self.onError(err);
 
     // add response data to metrics payload
     metrics = _.assign(metrics, self.parseResponse(res));
@@ -133,9 +133,9 @@ Metrics.prototype.parseRequest = function(req) {
 
   return {
     '_meta' : {
-      'hostname' : self.hostname
+      'host' : self.hostname
     },
-    'request': {
+    'req': {
       'delay' : delay,
       'href'  : req.protocol + '://' + self.hostname + req.path,
       'path'  : req.path,
@@ -152,7 +152,7 @@ Metrics.prototype.parseResponse = function(res) {
   var delay = instance.responseTime(res.req._startAt);
 
   return {
-    'response': {
+    'res': {
       'contentLength' : res._headers['content-length'],
       'delay'         : delay,
       'statusCode'    : res.statusCode,
@@ -162,11 +162,15 @@ Metrics.prototype.parseResponse = function(res) {
 };
 
 Metrics.prototype.sendMetrics = function(metrics) {
-  log.debug('response code was %s', metrics.statusCode);
-  if (metrics.contentLength)
-    log.debug('Payload size was %s bytes', metrics.contentLength);
-  log.debug('delay: %d%s', metrics.response.delay.ms, 'ms');
-  log.debug('Will report %j to %s', metrics, metrics.path);
+
+  log.debug('response code was %s', metrics.res.statusCode);
+
+  if (metrics.res.contentLength)
+    log.debug('Payload size was %s bytes', metrics.res.contentLength);
+
+  log.debug('delay: %d%s', metrics.res.delay.ms, 'ms');
+  log.debug('Will report %j to %s', metrics, metrics.req.path);
+
 };
 
 module.exports = function(client, opts) {
