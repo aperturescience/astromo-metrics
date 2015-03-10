@@ -132,8 +132,8 @@ Metrics.prototype.parseRequest = function(req) {
       'host' : self.hostname
     },
     'req': {
-      'href'  : req.protocol + '://' + self.hostname + req.path,
-      'path'  : req.path,
+      'href' : req.protocol + '://' + self.hostname + req.path,
+      'path' : req.originalUrl || req.url
     }
   };
 
@@ -146,11 +146,13 @@ Metrics.prototype.parseResponse = function(res) {
 
   var delay = this.responseTime(res.req._startAt);
 
+  var statusCode = res._header ? res.statusCode : null;
+
   return {
     'res': {
       'contentLength' : res._headers['content-length'],
       'delay'         : delay,
-      'statusCode'    : res.statusCode,
+      'statusCode'    : statusCode,
     }
   };
 
