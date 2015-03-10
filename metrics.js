@@ -162,6 +162,14 @@ Metrics.prototype.parseResponse = function(res) {
  */
 Metrics.prototype.sendMetrics = function(metrics) {
 
+  var ws = this.ws;
+
+  if (!ws)
+    return log.warn('No WebSocket connection found, aborting.');
+
+  if (ws.readyState !== WebSocket.OPEN)
+    return log.warn('WebSocket connection is not open, aborting.');
+
   log.debug('response code was %s', metrics.res.statusCode);
 
   if (metrics.res.contentLength)
@@ -170,6 +178,7 @@ Metrics.prototype.sendMetrics = function(metrics) {
   log.debug('delay: %d%s', metrics.res.delay.ms, 'ms');
   log.debug('Will report %j to %s', metrics, metrics.req.path);
 
+  ws.send(JSON.stringify(metrics));
 };
 
 module.exports = function(client, opts) {
