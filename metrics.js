@@ -20,7 +20,7 @@ function Metrics(client, options) {
 
   // Create Bunyan logger
   self.log = log = bunyan.createLogger({
-    name  : 'cerberus.metrics',
+    name  : 'astromo.metrics',
     level : self.debug ? bunyan.DEBUG : bunyan.INFO
   });
 
@@ -145,7 +145,6 @@ Metrics.prototype.parseRequest = function(req) {
 Metrics.prototype.parseResponse = function(res) {
 
   var delay = this.responseTime(res.req._startAt);
-
   var statusCode = res._header ? res.statusCode : null;
 
   return {

@@ -2,9 +2,9 @@
 
 var Metrics = require('./metrics');
 
-function Cerberus() {}
+function Astromo() {}
 
-Cerberus.prototype.Metrics = function(opts) {
+Astromo.prototype.Metrics = function(opts) {
   var self = this;
 
   self._metrics = new Metrics(self, opts);
@@ -17,6 +17,6 @@ Cerberus.prototype.Metrics = function(opts) {
 
 };
 
-var cerberus = new Cerberus();
+var astromo = new Astromo();
 
-module.exports = cerberus;
+module.exports = astromo;
