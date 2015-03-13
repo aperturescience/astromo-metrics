@@ -162,13 +162,16 @@ Metrics.prototype.parseResponse = function(res) {
  */
 Metrics.prototype.sendMetrics = function(metrics) {
 
-  var ws = this.ws;
+  var self = this,
+        ws = this.ws;
 
   if (!ws)
     return log.warn('No WebSocket connection found, aborting.');
 
-  if (ws.readyState !== WebSocket.OPEN)
-    return log.warn('WebSocket connection is not open, aborting.');
+  if (ws.readyState !== WebSocket.OPEN) {
+    log.warn('WebSocket connection is not open, aborting.');
+    return self.connect();
+  }
 
   log.debug('response code was %s', metrics.res.statusCode);
 
