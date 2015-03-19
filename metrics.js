@@ -21,7 +21,7 @@ function Metrics(options) {
   // Create Bunyan logger
   self.log = log = bunyan.createLogger({
     name  : 'astromo.metrics',
-    level : self.debug ? bunyan.DEBUG : bunyan.INFO
+    level : self.options.debug ? bunyan.DEBUG : bunyan.INFO
   });
 
   self.connect(function() {
@@ -97,16 +97,19 @@ Metrics.prototype.parseRequest = function(req) {
 
   var self = this;
 
-  if (!self.hostname)
-    self.hostname = req.hostname;
+  var host = self.options.host;
+  var path = req.originalUrl;
+
+  if (!host)
+    log.error('No hostname was configured for this proxy.');
 
   return {
     '_meta' : {
-      'host' : self.hostname
+      'host' : host
     },
     'req': {
-      'href' : req.protocol + '://' + self.hostname + req.path,
-      'path' : req.originalUrl || req.url
+      'href' : host + path,
+      'path' : path
     }
   };
 
@@ -152,7 +155,6 @@ Metrics.prototype.sendMetrics = function(metrics) {
     log.debug('Payload size was %s bytes', metrics.res.contentLength);
 
   log.debug('delay: %d%s', metrics.res.delay.ms, 'ms');
-  log.debug('Will report %j to %s', metrics, metrics.req.path);
 
   ws.send(JSON.stringify(metrics));
 };
@@ -163,9 +165,11 @@ module.exports = function(options) {
 
   return function(req, res, next) {
 
+    res.req = req; // inject the request into the response
+
     var metrics = instance.parseRequest(req);
 
-    // If we're not using Morgan, add the timings ourself
+    // add the start timings
     if (!req.hasOwnProperty('_startAt'))
       req._startAt = process.hrtime();
 
@@ -177,6 +181,8 @@ module.exports = function(options) {
 
       // add response data to metrics payload
       metrics = _.assign(metrics, instance.parseResponse(res));
+
+      log.debug('Collected %j', metrics);
 
       instance.sendMetrics(metrics);
     });
