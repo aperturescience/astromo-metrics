@@ -12,7 +12,7 @@ function Metrics(options) {
   var self = this;
 
   var defaults = {
-    gatewayUrl : 'ws://localhost:8081',
+    gatewayUrl : 'ws://127.0.0.1',
     debug      : false
   };
 
