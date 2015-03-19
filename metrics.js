@@ -1,22 +1,22 @@
 'use strict';
 
-var _          = require('lodash-node');
+var _          = require('lodash');
 var WebSocket  = require('ws');
 var bunyan     = require('bunyan');
 var onFinished = require('on-finished');
 
 var log;
 
-function Metrics(client, options) {
+function Metrics(options) {
+
   var self = this;
 
-  this.client = client;
+  var defaults = {
+    gatewayUrl : 'ws://localhost:8081',
+    debug      : false
+  };
 
-  // defaults
-  this.gatewayUrl = 'ws://localhost:8081';
-  this.debug      = false;
-
-  _.assign(this, options);
+  self.options = _.assign(defaults, options);
 
   // Create Bunyan logger
   self.log = log = bunyan.createLogger({
@@ -35,7 +35,7 @@ function Metrics(client, options) {
 Metrics.prototype.connect = function(callback) {
   var self = this;
 
-  var ws = this.ws = new WebSocket(this.gatewayUrl);
+  var ws = this.ws = new WebSocket(self.options.gatewayUrl);
 
   ws.on('error', self.onError);
 
@@ -88,33 +88,6 @@ Metrics.prototype.responseTime = function(hrtime) {
     ms: ms.toFixed(3)
   };
 
-};
-
-/**
- * Metrics middleware request handler
- */
-Metrics.prototype.handler = function(req, res, next) {
-  var self = this;
-
-  var metrics = self.parseRequest(req);
-
-  // If we're not using Morgan, add the timings ourself
-  if (!req.hasOwnProperty('_startAt'))
-    req._startAt = process.hrtime();
-
-  // Wait for Express to send the response back to the client
-  onFinished(res, function(err, res) {
-
-    if (err)
-      return self.onError(err);
-
-    // add response data to metrics payload
-    metrics = _.assign(metrics, self.parseResponse(res));
-
-    self.sendMetrics(metrics);
-  });
-
-  next();
 };
 
 /**
@@ -184,6 +157,31 @@ Metrics.prototype.sendMetrics = function(metrics) {
   ws.send(JSON.stringify(metrics));
 };
 
-module.exports = function(client, opts) {
-  return new Metrics(client, opts);
+module.exports = function(options) {
+
+  var instance = new Metrics(options);
+
+  return function(req, res, next) {
+
+    var metrics = instance.parseRequest(req);
+
+    // If we're not using Morgan, add the timings ourself
+    if (!req.hasOwnProperty('_startAt'))
+      req._startAt = process.hrtime();
+
+    // Wait for Express to send the response back to the client
+    onFinished(res, function(err, res) {
+
+      if (err)
+        return instance.onError(err);
+
+      // add response data to metrics payload
+      metrics = _.assign(metrics, instance.parseResponse(res));
+
+      instance.sendMetrics(metrics);
+    });
+
+    next();
+  };
+
 };
