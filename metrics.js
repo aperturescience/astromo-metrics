@@ -1,9 +1,10 @@
 'use strict';
 
 var _          = require('lodash');
-var WebSocket  = require('ws');
 var bunyan     = require('bunyan');
 var onFinished = require('on-finished');
+var url        = require('url');
+var influx     = require('./db');
 
 var log;
 
@@ -12,57 +13,27 @@ function Metrics(options) {
   var self = this;
 
   var defaults = {
-    gatewayUrl : 'ws://127.0.0.1',
+    metricsUrl : 'http://127.0.0.1:8086',
     debug      : false
   };
 
-  self.options = _.assign(defaults, options);
+  self.options = options = _.assign(defaults, options);
 
   // Create Bunyan logger
   self.log = log = bunyan.createLogger({
     name  : 'astromo.metrics',
-    level : self.options.debug ? bunyan.DEBUG : bunyan.INFO
+    level : options.debug ? bunyan.DEBUG : bunyan.INFO
   });
 
-  self.connect(function() {
-    log.debug('Successfully connected');
+  var influxOpts = url.parse(options.metricsUrl);
+
+  this.influxClient = new influx({
+    host : influxOpts.hostname,
+    port : influxOpts.port,
+    ssl  : influxOpts.protocol === 'https'
   });
+
 }
-
-/**
- * Connect to Metrics endpoint
- */
-Metrics.prototype.connect = function(callback) {
-  var self = this;
-
-  var ws = this.ws = new WebSocket(self.options.gatewayUrl);
-
-  ws.on('error', self.onError);
-
-  ws.on('open', callback || _.noop);
-
-  ws.on('message', function(data, flags) {
-    try {
-      self.parseMessage(data, flags);
-    } catch(ex) {
-      self.onError(ex);
-    }
-  });
-};
-
-/**
- * Parse message from WS connection
- */
-Metrics.prototype.parseMessage = function(data, flags) {
-  data = JSON.parse(data);
-
-  if (data.type === 'WELCOME') {
-    log.debug('Successfully authenticated');
-  } else {
-    log.warn('Received incorrect welcome message');
-  }
-
-};
 
 /**
  * /!\ Don't throw an error when something goes wrong!
@@ -97,8 +68,11 @@ Metrics.prototype.parseRequest = function(req) {
 
   var self = this;
 
-  var host = self.options.host;
-  var path = req.originalUrl;
+  var host   = self.options.host;
+  var path   = req._parsedUrl.pathname;
+  var search = req._parsedUrl.search;
+
+  console.log(req);
 
   if (!host)
     log.error('No hostname was configured for this proxy.');
@@ -108,8 +82,9 @@ Metrics.prototype.parseRequest = function(req) {
       'host' : host
     },
     'req': {
-      'href' : host + path,
-      'path' : path
+      'href'   : host + path,
+      'path'   : path,
+      'search' : search
     }
   };
 
@@ -134,20 +109,37 @@ Metrics.prototype.parseResponse = function(res) {
 };
 
 /**
- * Send metrics over WS to the gateway
+ * Assemble correct data structure
+ */
+Metrics.prototype.assemble = function(metrics) {
+
+  var host = url.parse(metrics._meta.host).host;
+
+  return {
+    'database': 'localhost',
+    'tags': {
+      'host'   : host,
+      'path'   : metrics.req.path,
+      'search' : metrics.req.search
+    },
+    'points': [
+      {
+        'name': 'latency',
+        'timestamp': metrics.timestamp,
+        'fields': {
+          'ms': parseFloat(metrics.res.delay.ms),
+          'ns': metrics.res.delay.ns
+        }
+      }
+    ]
+  };
+
+};
+
+/**
+ * Send metrics to the metrics aggregator
  */
 Metrics.prototype.sendMetrics = function(metrics) {
-
-  var self = this,
-        ws = this.ws;
-
-  if (!ws)
-    return log.warn('No WebSocket connection found, aborting.');
-
-  if (ws.readyState !== WebSocket.OPEN) {
-    log.warn('WebSocket connection is not open, aborting.');
-    return self.connect();
-  }
 
   log.debug('response code was %s', metrics.res.statusCode);
 
@@ -156,7 +148,9 @@ Metrics.prototype.sendMetrics = function(metrics) {
 
   log.debug('delay: %d%s', metrics.res.delay.ms, 'ms');
 
-  ws.send(JSON.stringify(metrics));
+  metrics = this.assemble(metrics);
+
+  this.influxClient.write(metrics);
 };
 
 module.exports = function(options) {
@@ -181,6 +175,9 @@ module.exports = function(options) {
 
       // add response data to metrics payload
       metrics = _.assign(metrics, instance.parseResponse(res));
+
+      // add timestamp for reporting
+      metrics.timestamp = new Date().toISOString();
 
       log.debug('Collected %j', metrics);
 
