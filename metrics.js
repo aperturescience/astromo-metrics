@@ -72,8 +72,6 @@ Metrics.prototype.parseRequest = function(req) {
   var path   = req._parsedUrl.pathname;
   var search = req._parsedUrl.search;
 
-  console.log(req);
-
   if (!host)
     log.error('No hostname was configured for this proxy.');
 
@@ -116,7 +114,7 @@ Metrics.prototype.assemble = function(metrics) {
   var host = url.parse(metrics._meta.host).host;
 
   return {
-    'database': 'localhost',
+    'database': 'test',
     'tags': {
       'host'   : host,
       'path'   : metrics.req.path,
