@@ -1,5 +1,5 @@
 {
-  "name": "astromo-metrics",
+  "name": "sallyport-metrics",
   "version": "0.1.0",
   "description": "Middleware for the Astromo Gateway",
   "main": "index.js",
